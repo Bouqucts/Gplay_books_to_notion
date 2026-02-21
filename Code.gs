@@ -3,6 +3,8 @@ const BOOKS_DB_ID = 'YOUR BOOK DATABASE ID';
 const HIGHLIGHTS_DB_ID = 'YOUR HIGHLIGHTS ID'; 
 const FOLDER_ID = 'YOUR DRIVE FOLDER ID';
 
+// --start syncSmartParsing--
+// Main function to sync highlights from Drive to Notion
 function syncSmartParsing() {
   const folder = DriveApp.getFolderById(FOLDER_ID);
   const files = folder.getFiles();
@@ -12,6 +14,7 @@ function syncSmartParsing() {
     let file = files.next();
     let fileId = file.getId();
     
+    // Skip file if no changes detected
     let lastUpdated = file.getLastUpdated().getTime().toString();
     if (scriptProperties.getProperty(fileId) === lastUpdated) {
       console.log("Skipping " + file.getName() + " (no changes detected)");
@@ -20,6 +23,7 @@ function syncSmartParsing() {
 
     let doc = DocumentApp.openById(fileId);
     let rawTitle = file.getName()
+    // to remove "Notes from " prefix and quotes to get the clean book title in notion
       .replace('Notes from "', '')
       .replace('"', '')
       .trim();
@@ -39,6 +43,7 @@ function syncSmartParsing() {
 
       let isHighlighted = false;
       try { 
+        // Detect highlight by background color
         let bgColor = p.getAttributes().BACKGROUND_COLOR;
         isHighlighted = (bgColor !== null && bgColor !== '#ffffff'); 
       } catch(e) {}
@@ -50,6 +55,7 @@ function syncSmartParsing() {
         currentHighlight = text;
         currentNote = ""; 
       } else if (currentHighlight !== "" && text.length > 0) {
+        // Filter page numbers and dates
         let isPageNumber = /^\d+$/.test(text); 
         let isDate = text.match(/^\d+\.?\s+\w+\s+\d{4}$/) || text.match(/^[A-Z][a-z]+ \d+, \d{4}$/);
 
@@ -67,7 +73,10 @@ function syncSmartParsing() {
     console.log("Successfully synced book: " + rawTitle);
   }
 }
+// --end syncSmartParsing--
 
+// --start sendToNotion--
+// Push highlight and note data to Notion API
 function sendToNotion(bookId, highlight, note) {
   const url = 'https://api.notion.com/v1/pages';
   const payload = {
@@ -95,7 +104,10 @@ function sendToNotion(bookId, highlight, note) {
     console.log("Failed to send highlight: " + res.getContentText());
   }
 }
+// --end sendToNotion--
 
+// --start getOrCreateBook--
+// Find book ID in Notion or create a new entry
 function getOrCreateBook(title) {
   const url = `https://api.notion.com/v1/databases/${BOOKS_DB_ID}/query`;
   const headers = {
@@ -123,8 +135,12 @@ function getOrCreateBook(title) {
   });
   return JSON.parse(createRes.getContentText()).id;
 }
+// --end getOrCreateBook--
 
+// --start resetMemori--
+// Clear script properties to force re-sync
 function resetMemori() {
   PropertiesService.getScriptProperties().deleteAllProperties();
   console.log("Memory cleared! You can now run syncSmartParsing.");
 }
+// --end resetMemori--
