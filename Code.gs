@@ -23,7 +23,7 @@ function syncSmartParsing() {
 
     let doc = DocumentApp.openById(fileId);
     let rawTitle = file.getName()
-    // to remove "Notes from " prefix and quotes to get the clean book title in notion
+    // EDIT HERE
       .replace('Notes from "', '')
       .replace('"', '')
       .trim();
